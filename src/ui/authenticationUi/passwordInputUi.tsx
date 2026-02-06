@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { validateInput } from '../businessLogic/validationLoginForm';
+import { validateInput } from '../../businessLogic/validationLoginForm';
 import { ErrorElementInput } from './errorsInput';
 
 interface Props {

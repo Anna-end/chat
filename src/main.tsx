@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import './index.css'
-import { AuthenticationPage } from './ui/authenticationPage';
+import { AuthenticationPage } from './ui/authenticationUi/authenticationPage';
 import { DashboardPage } from './ui/dashboardPage';
 import { PrivateRoute } from './appRoute/privateRoute'
 

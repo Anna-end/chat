@@ -4,11 +4,14 @@ import { LoginInput } from './loginInputUi'
 import { PasswordInput } from './passwordInputUi'
 import { useNavigate } from 'react-router-dom'
 import { connectWebSocket, loginUser } from '../../api/authenticationAPI';
-
+interface ValidData {
+  login: string | null;
+  password: string | null;
+}
 export function AuthenticationPage() {
   const navigate = useNavigate()
 
-  const [validData, setValidData] = useState({
+  const [validData, setValidData] = useState<ValidData>({
     login: null,
     password: null,
   })
@@ -16,7 +19,7 @@ export function AuthenticationPage() {
   const getInputValid = (elemInput: 'login' | 'password' , value: string) => {
       setValidData(prev => ({
         ...prev,
-        [elemInput]: value
+        [elemInput]: value || null
       }));
     };
 

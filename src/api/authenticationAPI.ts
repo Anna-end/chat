@@ -107,7 +107,7 @@ export function loginUser(login: string, password: string): Promise<UserAuthResp
     });
     if(socket)
     socket.send(JSON.stringify(request));
-    saveDataUserLocalStorage(login)
+    saveDataUserLocalStorage(login, requestId)
   });
 }
 

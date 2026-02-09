@@ -3,28 +3,35 @@ import type { FormEvent } from 'react'
 import { LoginInput } from './loginInputUi'
 import { PasswordInput } from './passwordInputUi'
 import { useNavigate } from 'react-router-dom'
-
+import { connectWebSocket, loginUser } from '../../api/authenticationAPI';
 
 export function AuthenticationPage() {
   const navigate = useNavigate()
 
   const [validData, setValidData] = useState({
-    login: false,
-    password: false,
+    login: null,
+    password: null,
   })
 
-  const getInputValid = (elemInput: 'login' | 'password' , isValid: boolean) => {
+  const getInputValid = (elemInput: 'login' | 'password' , value: string) => {
       setValidData(prev => ({
         ...prev,
-        [elemInput]: isValid
+        [elemInput]: value
       }));
     };
 
-  const handleAuthRedirect = (e: FormEvent<HTMLFormElement>) => {
+  const handleAuthRedirect = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
     if(validData.login && validData.password) {
-      navigate('/dashboard')
+      try {
+        await connectWebSocket();
+        const user = await loginUser(validData.login, validData.password);
+        console.log('Успешный вход!', user);
+        navigate('/dashboard')
+      } catch {
+        console.error('Ошибка');
+      }
     }
   }
 

@@ -3,7 +3,7 @@ import { validateInput } from '../../businessLogic/validationLoginForm';
 import { ErrorElementInput } from './errorsInput';
 
 interface Props {
-  onSendIsValid: (elemInput: 'login' | 'password' , isValid: boolean) => void;
+  onSendIsValid: (elemInput: 'login' | 'password' , value: string | null) => void;
 }
 
 export function LoginInput({onSendIsValid}: Props) {
@@ -11,7 +11,7 @@ export function LoginInput({onSendIsValid}: Props) {
   const [loginData, setLoginData] = useState('')
   const [errors, setErrors] = useState<string[] | null>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const [lastValidity, setLastValidity] = useState<boolean | null>(null)
+  const [lastValidity, setLastValidity] = useState<boolean>(false)
 
    const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -21,7 +21,7 @@ export function LoginInput({onSendIsValid}: Props) {
     if (value.trim() === '') {
       setErrors([])
       if (lastValidity !== false) {
-        onSendIsValid('login', false)
+        onSendIsValid('login', null)
         setLastValidity(false)
       }
       return
@@ -33,7 +33,7 @@ export function LoginInput({onSendIsValid}: Props) {
     
 
     if (lastValidity !== isValid) {
-      onSendIsValid('login', isValid)
+      onSendIsValid('login', value)
       setLastValidity(isValid)
     }
   }

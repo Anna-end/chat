@@ -3,7 +3,7 @@ import { validateInput } from '../../businessLogic/validationLoginForm';
 import { ErrorElementInput } from './errorsInput';
 
 interface Props {
-  onSendIsValid: (elemInput: 'login' | 'password' , isValid: boolean) => void;
+  onSendIsValid: (elemInput: 'login' | 'password' , value: string | null) => void;
 }
 
 export function PasswordInput({onSendIsValid}: Props) {
@@ -20,7 +20,7 @@ export function PasswordInput({onSendIsValid}: Props) {
       if (value.trim() === '') {
         setErrors([])
         if (lastValidity !== false) {
-          onSendIsValid('login', false)
+          onSendIsValid('password', null)
           setLastValidity(false)
         }
         return
@@ -32,7 +32,7 @@ export function PasswordInput({onSendIsValid}: Props) {
       
   
       if (lastValidity !== isValid) {
-        onSendIsValid('login', isValid)
+        onSendIsValid('password', value)
         setLastValidity(isValid)
       }
     }

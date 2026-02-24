@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWSData } from '../hooks/useWSData';
 import { useAuth } from '../api/authenticationUserWS';
-import { useLoginData } from '../useContextHook/loginContext';
+import { useLoginData } from '../hooks/useLoginCurrentUser';
 
 export function AuthInitializer() {
   const [isChecking, setIsChecking] = useState(true);

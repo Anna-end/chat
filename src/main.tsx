@@ -2,28 +2,24 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import './index.css'
-import { AuthenticationPage } from './ui/authenticationUi/authenticationPage';
-import { DashboardPage } from './ui/dashboardPage';
-import { PrivateRoute } from './appRoute/privateRoute'
-import { AuthInitializer } from './ui/authenticationUi/authInitializer';
+import { WebSocketProvider } from './useContext/WebSocketProvider';
+import { LoginDataProvider } from './useContext/LoginCurrentUserProvider';
+import { AuthInitializer } from './businessLogic/authInitializer';
+import { LoginPage } from './pages/loginPage';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-     <BrowserRouter>
-        <AuthInitializer />
-        <Routes>
-           <Route path="/" element={<Navigate to="/login" />} />
+    <BrowserRouter>
+      <WebSocketProvider>
+        <LoginDataProvider>
+          <AuthInitializer />
+            <Routes>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/login" element={<LoginPage />} />
 
-           <Route path="/login" element={<AuthenticationPage />} />
-
-          <Route 
-          path="/dashboard" 
-          element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          } 
-        />
-        </Routes>
-     </BrowserRouter>
-  </StrictMode>,
-)
+        
+            </Routes>
+        </LoginDataProvider>
+      </WebSocketProvider>
+    </BrowserRouter>
+  </StrictMode>
+);

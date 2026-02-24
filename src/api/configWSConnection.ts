@@ -1,121 +1,147 @@
-import { saveDataUserLocalStorage } from './localStorage'
-interface UserCredentials {
-  login: string;
-  password: string;
-}
+import { useState, useRef, useCallback, useEffect } from 'react';
+import type { MessageCallback, WebSocketMessage} from '../types/websocketTypes';
+const MAX_RECONNECT_ATTEMPTS = 5;
+const BASE_RECONNECT_DELAY = 1000;
 
-interface UserAuthRequest {
-  id: string;
-  type: "USER_LOGIN";
-  payload: {
-    user: UserCredentials;
-  };
-}
+export const useWebSocket = () => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
-interface UserAuthResponse {
-  id: string;
-  type: "USER_LOGIN";
-  payload: {
-    user: {
-      login: string;
-      isLogined: boolean;
-    };
-  };
-}
+  const wsRef = useRef<WebSocket | null>(null);
+  const messageHandlersRef = useRef<MessageCallback[]>([]);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isManualDisconnectRef = useRef(false);
+  const reconnectAttemptRef = useRef(0);
 
+  const connectRef = useRef<() => Promise<void> | undefined>(undefined);
 
-
-let socket: WebSocket | null = null;
-let isConnected: boolean = false;
-const pendingRequests = new Map();
-const SERVER_PORT = 4000;
-
-const generateUniqueId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)}
-
-export function connectWebSocket(): Promise<void> {
-  return new Promise<void>((resolve, rej) => {
-    socket = new WebSocket(`ws://localhost:${SERVER_PORT}`);
-
-    socket.onopen = () => {
-      console.log('WebSocket соединение установлено');
-      isConnected = true;
-      resolve();
-    };
-    socket.onmessage = handleServerMessage;
-    socket.onerror = (error: Event) => {
-      console.error('WebSocket ошибка:', error);
-      rej(error);
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
     }
+  }, []);
 
-    socket.onclose = (event: CloseEvent) => {
-      console.log('Соединение закрыто', event.code, event.reason);
-      isConnected = false;
-      pendingRequests.clear();
-    };
-  })
-}
-
-function handleServerMessage(event: MessageEvent) {
-  try {
-    const response = JSON.parse(event.data as string);
-    const { id, type, payload } = response;
-    
-    if (type === "USER_LOGIN" && pendingRequests.has(id)) {
-      const request = pendingRequests.get(id)!;
-      clearTimeout(request.timeout);
-      
-      if (payload.user.isLogined) {
-        console.log('✅ Пользователь успешно аутентифицирован:', payload.user.login);
-        request.resolve(payload.user);
-      } else {
-        console.log('❌ Аутентификация не удалась для:', payload.user.login);
-        request.reject(new Error('Неверные учетные данные'));
+  const connect = useCallback(() => {
+    return new Promise<void>((res, rej) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        res();
+        return;
       }
-      
-      pendingRequests.delete(id);
-    }
-  } catch (error) {
-    console.error('Ошибка обработки сообщения:', error);
-  }
-}
 
-export function loginUser(login: string, password: string): Promise<UserAuthResponse> {
-  return new Promise((resolve, reject) => {
-    if (!isConnected || !socket) {
-      reject(new Error('Соединение не установлено'));
-      return;
-    }
-    
-    const requestId = generateUniqueId();
-    
-    const request: UserAuthRequest = {
-      id: requestId,
-      type: "USER_LOGIN",
-      payload: {
-        user: { login, password }
+      isManualDisconnectRef.current = false;
+
+      try {
+        const socket = new WebSocket(`ws://localhost:4000`);
+        wsRef.current = socket;
+
+        socket.onopen = () => {
+          console.log('✅ WebSocket подключен');
+          setIsConnected(true);
+
+          reconnectAttemptRef.current = 0;
+          setReconnectAttempt(0);
+
+          clearReconnectTimer();
+          res();
+        };
+
+        socket.onerror = error => {
+          console.error('❌ WebSocket ошибка:', error);
+          setIsConnected(false);
+          rej(error);
+        };
+
+        socket.onclose = () => {
+          console.log('🔌 WebSocket закрыт');
+          setIsConnected(false);
+
+          if (!isManualDisconnectRef.current) {
+            const currentAttempt = reconnectAttemptRef.current;
+
+            if (currentAttempt < MAX_RECONNECT_ATTEMPTS) {
+              const nextAttempt = currentAttempt + 1;
+              const delay = BASE_RECONNECT_DELAY * Math.pow(2, currentAttempt);
+
+              console.log(
+                `🔄 Переподключение через ${delay / 1000}с... (попытка ${nextAttempt}/${MAX_RECONNECT_ATTEMPTS})`
+              );
+
+              reconnectAttemptRef.current = nextAttempt;
+              setReconnectAttempt(nextAttempt);
+
+              reconnectTimerRef.current = setTimeout(() => {
+                connectRef.current?.();
+              }, delay);
+            } else {
+              console.error('💀 Все попытки переподключения исчерпаны');
+            }
+          }
+        };
+
+        socket.onmessage = event => {
+          try {
+            const data = JSON.parse(event.data);
+            messageHandlersRef.current.forEach(handler => handler(data));
+          } catch (error) {
+            console.error('Ошибка парсинга сообщения:', error);
+          }
+        };
+      } catch (error) {
+        setIsConnected(false);
+        rej(error);
       }
-    };
-    
-    pendingRequests.set(requestId, {
-      resolve,
-      reject,
-      timeout: setTimeout(() => {
-        pendingRequests.delete(requestId);
-        reject(new Error('Таймаут ожидания ответа от сервера'));
-      }, 10000)
     });
-    if(socket)
-    socket.send(JSON.stringify(request));
-    saveDataUserLocalStorage(login, requestId)
-  });
-}
+  }, [clearReconnectTimer]);
 
-export function disconnectWebSocket() {
-  if (socket) {
-    socket.close();
-    socket = null;
-    isConnected = false;
-    pendingRequests.clear();
-  }
-}
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  const sendMessage = useCallback((message: WebSocketMessage) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+    } else {
+      console.warn('⚠️ WebSocket не подключен');
+    }
+  }, []);
+
+  const onMessage = useCallback((handler: MessageCallback) => {
+    messageHandlersRef.current.push(handler);
+
+    return () => {
+      messageHandlersRef.current = messageHandlersRef.current.filter(h => h !== handler);
+    };
+  }, []);
+
+  const disconnect = useCallback(() => {
+    console.log('👋 Намеренное отключение');
+    isManualDisconnectRef.current = true;
+    clearReconnectTimer();
+
+    if (wsRef.current) {
+      const state = wsRef.current.readyState;
+
+      if (state === WebSocket.CONNECTING) {
+        wsRef.current.onopen = () => wsRef.current?.close();
+      } else if (state === WebSocket.OPEN) {
+        wsRef.current.close();
+      }
+    }
+
+    wsRef.current = null;
+    setIsConnected(false);
+    setReconnectAttempt(0);
+    reconnectAttemptRef.current = 0;
+  }, [clearReconnectTimer]);
+
+  return {
+    isConnected,
+    reconnectAttempt,
+    maxReconnectAttempts: MAX_RECONNECT_ATTEMPTS,
+    connect,
+    sendMessage,
+    onMessage,
+    disconnect,
+  };
+};

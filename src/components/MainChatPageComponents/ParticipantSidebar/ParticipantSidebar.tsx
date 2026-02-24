@@ -1,18 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuthUsers } from '../../../api/gettingAuthUsersWS';
 import { useWSData } from '../../../hooks/useWSData';
 import { ShowingUsersBtn } from './ShowingUsersBtn';
 import { IconUser } from './IconUser';
 import { useSelectedMember } from '../../../hooks/useSelectedMemberContext';
 import { useLoginData } from '../../../hooks/useLoginCurrentUser';
-interface User {
-  login: string;
-  isLogined: boolean;
-}
+import { useUsersOnSite } from '../../../hooks/useUsersOnSite'
+import type {User} from '../../../api/gettingAuthUsersWS';
 
 export const ParticipantSidebar = () => {
   const ws = useWSData();
-  const { loading, authenticatedUsers, getAuthUsers } = useAuthUsers(ws);
+  const { loading, authenticatedUsers, getAuthUsers, getUnauthUsers, unAuthenticatedUsers } = useAuthUsers(ws);
   const [error, setError] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { userData } = useLoginData();
@@ -22,10 +20,9 @@ export const ParticipantSidebar = () => {
     const selectedLogin = login;
     setData({ login: selectedLogin });
   };
-  useEffect(() => {
-    console.log('👥 Текущий список пользователей:', authenticatedUsers);
-  }, [authenticatedUsers]);
 
+
+  const allUsers  = useUsersOnSite({ authenticatedUsers, unAuthenticatedUsers});
   const onlineCount = authenticatedUsers
     .filter((user: User) => user.login !== userData.login)
     .filter((user: User) => user.isLogined).length;
@@ -74,7 +71,7 @@ export const ParticipantSidebar = () => {
             )}
 
             <div className="flex flex-col gap-2">
-              {authenticatedUsers
+              {allUsers
                 .filter((user: User) => user.login !== userData.login)
                 .map((user: User) => (
                   <div
@@ -109,6 +106,7 @@ export const ParticipantSidebar = () => {
                   onClick={() => {
                     setError(false);
                     getAuthUsers();
+                    getUnauthUsers();
                   }}
                   className="ml-2 underline hover:no-underline"
                 >
@@ -126,7 +124,7 @@ export const ParticipantSidebar = () => {
             {onlineCount}
           </div>
           <div className="flex flex-col gap-2">
-            {authenticatedUsers
+            {allUsers
               .filter((user: User) => user.login !== userData.login)
               .slice(0, 3)
               .map((user: User) => (

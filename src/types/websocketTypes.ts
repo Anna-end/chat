@@ -62,7 +62,22 @@ export interface AuthenticatedUsersResponse {
     }>;
   };
 }
+export interface UnauthorizedUsersRequest {
+  id: string,
+  type: "USER_INACTIVE",
+  payload: null,
+}
 
+export interface UnauthorizedUsersResponse {
+  id: string,
+  type: "USER_INACTIVE",
+  payload: {
+    users: Array<{
+      login: string;
+      isLogined: boolean;
+    }>;
+  }
+}
 export interface UserLogoutServer {
   id: null;
   type: 'USER_EXTERNAL_LOGOUT';
@@ -100,7 +115,7 @@ export interface SendingMessageUserResponse {
   id: string;
   type: 'MSG_SEND';
   payload: {
-    message: HistoryMessage; // переиспользуем
+    message: HistoryMessage; 
   };
 }
 
@@ -108,7 +123,7 @@ export interface ReceivingMessageFromUser {
   id: null;
   type: 'MSG_SEND';
   payload: {
-    message: HistoryMessage; // переиспользуем
+    message: HistoryMessage; 
   };
 }
 
@@ -126,19 +141,34 @@ export interface MessageHistoryWithUserResponse {
   id: string;
   type: 'MSG_FROM_USER';
   payload: {
-    messages: HistoryMessage[]; // было []
+    messages: HistoryMessage[];
   };
 }
 
-export const generateRequestId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`; // substr → slice
-};
+export interface FetchingCountUnreadMessagesWithUserRequest {
+  id: string,
+  type: "MSG_COUNT_NOT_READED_FROM_USER",
+  payload: {
+    user: {
+      login: string,
+    }
+  }
+}
 
+export interface FetchingCountUnreadMessagesWithUserResponse {
+  id: string,
+  type: "MSG_COUNT_NOT_READED_FROM_USER",
+  payload: {
+    count: number,
+  }
+}
 export type WebSocketMessage =
   | UserLoginRequest
   | UserLoginResponse
   | AuthenticatedUsersRequest
   | AuthenticatedUsersResponse
+  | UnauthorizedUsersResponse
+  | UnauthorizedUsersRequest
   | UserLogoutServer
   | UserLoginServer
   | SendingMessageUserRequest
@@ -146,7 +176,11 @@ export type WebSocketMessage =
   | ReceivingMessageFromUser
   | MessageHistoryWithUserRequest
   | MessageHistoryWithUserResponse
-  | ServerErrorResponse;
+  | ServerErrorResponse
+  | FetchingCountUnreadMessagesWithUserRequest
+  | FetchingCountUnreadMessagesWithUserResponse;
+
+export type MessageCallback = (message: WebSocketMessage) => void;
 
 export interface WebSocketInstance {
   isConnected: boolean;
@@ -158,4 +192,3 @@ export interface WebSocketInstance {
   disconnect: () => void;
 }
 
-export type MessageCallback = (message: WebSocketMessage) => void;

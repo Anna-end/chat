@@ -7,6 +7,7 @@ import { useSelectedMember } from '../../../hooks/useSelectedMemberContext';
 import { useLoginData } from '../../../hooks/useLoginCurrentUser';
 import { useUsersOnSite } from '../../../hooks/useUsersOnSite'
 import type {User} from '../../../api/gettingAuthUsersWS';
+import { CounterUnreadMes} from './CounterUnreadMes';
 
 export const ParticipantSidebar = () => {
   const ws = useWSData();
@@ -50,7 +51,7 @@ export const ParticipantSidebar = () => {
         <>
           <div className="px-4 py-2">
             <h2 className="font-bold text-[#721E1E] text-lg flex items-center justify-between">
-              <span>Участники</span>
+              <span>В сети</span>
               <span className="bg-[#721E1E] text-[#E2D797] text-sm px-2 py-1 rounded-full">
                 {onlineCount}
               </span>
@@ -95,6 +96,7 @@ export const ParticipantSidebar = () => {
                         </span>
                       </div>
                     </div>
+                    <CounterUnreadMes userLogin={user.login}/>
                   </div>
                 ))}
             </div>

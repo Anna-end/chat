@@ -1,11 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBuble';
-
+import { useReadStatus } from '../../../api/messageReadStatusWs'
 interface Message {
   id: string;
   text: string;
   from: string;
   time: string;
+  status: {
+    isDelivered: boolean;
+    isReaded: boolean;
+    isEdited: boolean;
+  };
 }
 
 interface MessageFeedProps {
@@ -16,10 +21,18 @@ interface MessageFeedProps {
 
 export const MessageFeed = ({ messages, currentUserLogin, isLoading }: MessageFeedProps) => {
   const bottomRef = useRef<HTMLDivElement>(null);
-
+  const { getReadMes } = useReadStatus();
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
+
+  useEffect(() => {
+    const unread = messages.filter(
+      msg => msg.from !== currentUserLogin && !msg.status?.isReaded
+    );
+
+    unread.forEach(msg => getReadMes(msg.id));
+  }, [messages, currentUserLogin, getReadMes]);
 
   if (isLoading) {
     return <p className="text-center pt-8">Загрузка...</p>;
@@ -37,6 +50,7 @@ export const MessageFeed = ({ messages, currentUserLogin, isLoading }: MessageFe
           text={message.text}
           time={message.time}
           isMine={message.from === currentUserLogin}
+          status={message.status}
         />
       ))}
 

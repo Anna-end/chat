@@ -5,6 +5,7 @@ import { useSelectedMember } from '../../../hooks/useSelectedMemberContext';
 import { useMessages } from '../../../hooks/useMessage';
 import { MessageFeed } from './MessageFeed';
 import { MessageInput } from './MessageInput';
+import {useMessageStatuses} from '../../../api/haandleMessageServer';
 
 export const MessageList = () => {
   const ws = useWSData();
@@ -12,15 +13,18 @@ export const MessageList = () => {
   const { sendMessage: wsSend } = useSendMessage(ws);
   const { messageData } = useMessageServer(ws);
   const { member, messagesHistory, loadingMessage } = useSelectedMember();
+    const { statuses } = useMessageStatuses(ws);
 
   const { allMessages, sendMessage, sendError } = useMessages({
     messagesHistory,
     messageData,
     memberLogin: member?.login,
     currentUserLogin: userData.login,
+    statuses,
     onSend: async (text, id) => {
-      await wsSend(text, id);
-    },
+    const result = await wsSend(text, id);
+    if (result && typeof result === 'object') return result;
+  },
   });
 
   if (member === null) {

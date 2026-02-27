@@ -29,7 +29,7 @@ interface MessageResponse {
   };
 }
 export const useMessageServer = (ws: WebSocketInstance) => {
-  const [messageData, setMessageData] = useState<ReceivingMessageFromUser[]>([]); // ← массив
+  const [messageData, setMessageData] = useState<ReceivingMessageFromUser[]>([]); 
   const { member } = useSelectedMember();
   const { userData } = useLoginData();
   useEffect(() => {

@@ -1,7 +1,13 @@
+import { Check, CheckCheck, Clock } from 'lucide-react';
 interface MessageBubbleProps {
   text: string;
   time: string;
   isMine: boolean;
+  status: {
+    isDelivered: boolean;
+    isReaded: boolean;
+    isEdited: boolean;
+  };
 }
 const formatTime = (time: string | number) => {
   const date = new Date(Number(time));
@@ -22,7 +28,20 @@ const formatTime = (time: string | number) => {
     });
   }
 };
-export const MessageBubble = ({ text, time, isMine }: MessageBubbleProps) => {
+export const MessageBubble = ({ text, time, isMine, status }: MessageBubbleProps) => {
+  
+  const renderStatus = () => {
+    if (!isMine) return null;
+    
+    if (status.isReaded) {
+      return <CheckCheck className="w-3 h-3 text-blue-400" />;
+    }
+    if (status.isDelivered) {
+      return <Check className="w-3 h-3 text-gray-400" />;
+    }
+    return <Clock className="w-3 h-3 text-gray-400" />;
+  };
+
   return (
     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -35,7 +54,10 @@ export const MessageBubble = ({ text, time, isMine }: MessageBubbleProps) => {
         }}
       >
         <p className="text-sm">{text}</p>
-        <p className="text-xs mt-1 opacity-70 text-right">{formatTime(time)}</p>
+        <div className="flex justify-end items-center mt-1 gap-1">
+          <span className="text-xs opacity-70">{formatTime(time)}</span>
+          {renderStatus()}
+        </div>
       </div>
     </div>
   );

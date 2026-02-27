@@ -162,6 +162,43 @@ export interface FetchingCountUnreadMessagesWithUserResponse {
     count: number,
   }
 }
+
+export interface MessageReadStatusChangeRequest {
+  id: string,
+  type: "MSG_READ",
+  payload: {
+    message: {
+      id: string,
+    }
+  }
+}
+
+export interface MessageReadStatusChangeResponse {
+  id: string,
+  type: "MSG_READ"
+  payload: {
+    message: {
+      id: string,
+      status: {
+        isReaded: boolean,
+      }
+    }
+  }
+}
+
+export interface NotificationMessageReadStatusChange {
+  id: null,
+  type: "MSG_READ"
+  payload: {
+    message: {
+      id: string,
+      status: {
+        isReaded: boolean,
+      }
+    }
+  }
+}
+
 export type WebSocketMessage =
   | UserLoginRequest
   | UserLoginResponse
@@ -178,7 +215,10 @@ export type WebSocketMessage =
   | MessageHistoryWithUserResponse
   | ServerErrorResponse
   | FetchingCountUnreadMessagesWithUserRequest
-  | FetchingCountUnreadMessagesWithUserResponse;
+  | FetchingCountUnreadMessagesWithUserResponse
+  | MessageReadStatusChangeRequest
+  | MessageReadStatusChangeResponse
+  | NotificationMessageReadStatusChange
 
 export type MessageCallback = (message: WebSocketMessage) => void;
 

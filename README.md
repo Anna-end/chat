@@ -7,4 +7,6 @@ After logging in (using simple real-time validation based on the server's existi
 
 <img width="1103" height="759" alt="image" src="https://github.com/user-attachments/assets/840c8a29-bb4f-4529-b9eb-9719c3700297" />
 
-<img width="1094" height="703" alt="image" src="https://github.com/user-attachments/assets/b16c74ec-48a6-467e-b756-17ab7fec476a" />
+<img width="915" height="703" alt="image" src="https://github.com/user-attachments/assets/ee309f84-e270-4f22-949a-d58f0e34cd34" />
+
+

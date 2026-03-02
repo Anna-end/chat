@@ -46,6 +46,17 @@ export interface UserLogoutRequest {
   };
 }
 
+export interface UserLogoutResponse {
+  id: string;
+  type: 'USER_LOGOUT';
+  payload: {
+    user: {
+      login: string,
+      isLogined: boolean,
+    };
+  };
+}
+
 export interface AuthenticatedUsersRequest {
   id: string;
   type: 'USER_ACTIVE';
@@ -202,6 +213,8 @@ export interface NotificationMessageReadStatusChange {
 export type WebSocketMessage =
   | UserLoginRequest
   | UserLoginResponse
+  | UserLogoutRequest
+  | UserLogoutResponse
   | AuthenticatedUsersRequest
   | AuthenticatedUsersResponse
   | UnauthorizedUsersResponse
@@ -223,9 +236,6 @@ export type WebSocketMessage =
 export type MessageCallback = (message: WebSocketMessage) => void;
 
 export interface WebSocketInstance {
-  isConnected: boolean;
-  reconnectAttempt: number;
-  maxReconnectAttempts: number;
   connect: () => Promise<void>;
   sendMessage: (message: WebSocketMessage) => void;
   onMessage: (handler: MessageCallback) => () => void;

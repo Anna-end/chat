@@ -1,7 +1,5 @@
-import type {HistoryMessage} from './websocketTypes'
 export interface UserData {
   login: string;
-  id: string;
 }
 export interface LoginDataContextType {
   userData: UserData;
@@ -12,8 +10,6 @@ export interface LoginDataContextType {
 export interface SelectedMemberContextType {
   member: SelectedMember | null;
   setData: (updates: SelectedMember) => void;
-  messagesHistory: HistoryMessage[];
-  loadingMessage: boolean;
 }
 
 export interface SelectedMember {

@@ -4,8 +4,10 @@ import type {
 } from '../types/websocketTypes';
 import {generateRequestId} from '../utils/generateRequestId'
 import { isServerError } from '../types/errorsType';
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useWSData } from '../hooks/useWSData';
+import { useAppDispatch } from '../store/hooks';
+import { setUnreadCount } from '../store/features/members/membersSlice';
 
 const isCountMsg = (
   message: WebSocketMessage,
@@ -16,9 +18,7 @@ const isCountMsg = (
 
 export const useFetchingCountUnreadMes = () => {
   const ws = useWSData();
-  const [countUnreadMessages, setCountUnreadMessages] = useState<number | null>(null);
-  const [errorsCountResponse, setErrorsCountResponse] = useState<string | null>(null);
-
+  const dispatch = useAppDispatch();
   const getCountUnreadMes = useCallback(
     async (userLogin: string) => {
       try {
@@ -45,22 +45,19 @@ export const useFetchingCountUnreadMes = () => {
         });
 
         if (response.payload.count !== undefined && response.payload.count !== null) {
-          setCountUnreadMessages(response.payload.count);
+          dispatch(setUnreadCount({ login: userLogin, count: response.payload.count }))
           return true;
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
-        setErrorsCountResponse(errorMessage);
         console.error('❌ Ошибка истории:', errorMessage);
         return false;
       }
     },
-    [ws]
+    [ws, dispatch]
   );
 
   return {
-    countUnreadMessages,
-    errorsCountResponse,
     getCountUnreadMes,
   };
 };

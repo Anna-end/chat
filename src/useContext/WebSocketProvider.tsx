@@ -18,6 +18,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       ws.disconnect();
     };
-  }, []);
+  }, [ws]);
   return <WebSocketContext.Provider value={ws}>{children}</WebSocketContext.Provider>;
 }

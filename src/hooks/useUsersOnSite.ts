@@ -1,27 +1,13 @@
 import { useMemo } from 'react';
-import type { User } from '../api/gettingAuthUsersWS'
-interface usersProps {
-  authenticatedUsers: User[];
-  unAuthenticatedUsers: User[];
-}
+import { useAppSelector } from '../store/hooks';
 
-export const useUsersOnSite = ({ authenticatedUsers, unAuthenticatedUsers }: usersProps): User[] => {
-    const allUsers: User[] = useMemo(() => {
-      
-      const authUsers: User[] = authenticatedUsers.map(user => ({
-        login: user.login,
-        isLogined: user.isLogined
-      }));
-  
-      const unauthUsers: User[] = unAuthenticatedUsers.map(user => ({
-        login: user.login,
-        isLogined: user.isLogined
-      }));
-  
-      
-  
-      return ([...authUsers, ...unauthUsers]);
-    }, [authenticatedUsers, unAuthenticatedUsers]);
+export const useUsersOnSite = () => {
+  const authenticatedUsers = useAppSelector(state => state.members.authenticatedUsers);
+  const unauthenticatedUsers = useAppSelector(state => state.members.unauthenticatedUsers);
 
-    return allUsers
-}
+  const allUsers = useMemo(() => {
+    return [...authenticatedUsers, ...unauthenticatedUsers];
+  }, [authenticatedUsers, unauthenticatedUsers]);
+
+  return allUsers;
+};

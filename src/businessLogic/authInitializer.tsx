@@ -1,31 +1,41 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useWSData } from '../hooks/useWSData';
 import { useAuth } from '../api/authenticationUserWS';
 import { useLoginData } from '../hooks/useLoginCurrentUser';
+import { useAppSelector } from '../store/hooks';
+
+const USER_LOGIN_KEY = 'user_login';
+const USER_PASSWORD_KEY = 'user_auth_token';
 
 export function AuthInitializer() {
   const [isChecking, setIsChecking] = useState(true);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const ws = useWSData();
   const { login } = useAuth(ws);
   const { setData } = useLoginData();
 
+  const isConnected = useAppSelector(state => state.chat.isConnected);
+
   useEffect(() => {
     const tryAutoLogin = async () => {
-      const savedLogin = localStorage.getItem('user_login');
-      const savedPassword = localStorage.getItem('user_auth_token');
-      if (!savedLogin || !savedPassword) {
+      const savedLogin = localStorage.getItem(USER_LOGIN_KEY);
+      const savedPassword = localStorage.getItem(USER_PASSWORD_KEY);
+
+      if (!savedLogin || !savedPassword || location.pathname === '/login') {
         console.log('ℹ️ Нет сохранённых данных');
-        navigate('/login');
         setIsChecking(false);
         return;
       }
 
+      if (!isConnected) {
+        return; 
+      }
+
       try {
         console.log('🔑 Пробуем войти автоматически...');
-
         const success = await login(savedLogin, savedPassword);
 
         if (success) {
@@ -34,8 +44,8 @@ export function AuthInitializer() {
           navigate('/dashboard');
         } else {
           console.log('❌ Автовход не удался, данные устарели');
-          localStorage.removeItem('savedLogin');
-          localStorage.removeItem('savedPassword');
+          localStorage.removeItem(USER_LOGIN_KEY);
+          localStorage.removeItem(USER_PASSWORD_KEY);
           navigate('/login');
         }
       } catch (error) {
@@ -47,7 +57,7 @@ export function AuthInitializer() {
     };
 
     tryAutoLogin();
-  }, [ws.isConnected]);
+  }, [isConnected]);
 
   if (!isChecking) return null;
 

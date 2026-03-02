@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import type {
   WebSocketInstance,
   WebSocketMessage,
@@ -8,7 +8,10 @@ import type {
   UnauthorizedUsersResponse
 } from '../types/websocketTypes';
 import { useLoginData } from '../hooks/useLoginCurrentUser';
-import { generateRequestId } from '../utils/generateRequestId'
+import { generateRequestId } from '../utils/generateRequestId';
+import { useAppDispatch } from '../store/hooks';
+import { userLoggedOut, userLoggedIn, setAuthenticatedUsers, setUnauthenticatedUsers } from '../store/features/members/membersSlice';
+
 const isLoginResponse = (
   message: WebSocketMessage,
   requestId: string
@@ -27,49 +30,33 @@ const isUserEvent = (message: WebSocketMessage): boolean => {
   return message.type === 'USER_EXTERNAL_LOGOUT' || message.type === 'USER_EXTERNAL_LOGIN';
 };
 
-export interface User {
-  login: string;
-  isLogined: boolean;
-}
 export const useAuthUsers = (ws: WebSocketInstance) => {
-  const [authenticatedUsers, setAuthenticatedUsers] = useState<User[]>([]);
-  const [unAuthenticatedUsers, setUnauthenticatedUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
   const { userData } = useLoginData();
-
+// Прослушивание событий на логин и логаут пользователей в реальном времени
   useEffect(() => {
     if (!ws) return;
 
     const handleServerEvents = (message: WebSocketMessage) => {
-      console.log('📨 Получено сообщение:', message.type);
       if (isUserEvent(message)) {
         const logoutMsg = message as UserLogoutServer;
         const login = message as UserLoginServer;
         if (message.type === 'USER_EXTERNAL_LOGOUT') {
-          console.log('🚪 Logout:', message);
-          const loggedOutUser = logoutMsg.payload.user;
-          setAuthenticatedUsers(prev => {
-            const filtered = prev.filter(user => user.login !== loggedOutUser.login);
-            return filtered;
-          });
+         dispatch(userLoggedOut(logoutMsg.payload.user));
         }
         if (message.type === 'USER_EXTERNAL_LOGIN') {
-          console.log('✅ Login:', message);
-          const loginUser = login.payload.user;
-          setAuthenticatedUsers(prev => [...prev, loginUser]);
+          dispatch(userLoggedIn(login.payload.user));
         }
       }
     };
     const unsubscribe = ws.onMessage(handleServerEvents);
     return () => unsubscribe();
-  }, [ws]);
-
+  }, [ws, dispatch]);
+// получение списка залогиненых пользователей 
   const getAuthUsers = useCallback(async () => {
-    setLoading(true);
     try {
+      const requestId = generateRequestId();
       const response = await new Promise<AuthenticatedUsersResponse>((resolve, reject) => {
-        const requestId = generateRequestId();
-
         const timeout = setTimeout(() => {
           unsubscribe();
           reject(new Error('Timeout'));
@@ -91,7 +78,7 @@ export const useAuthUsers = (ws: WebSocketInstance) => {
       });
 
       if (response.payload?.users) {
-        setAuthenticatedUsers(response.payload.users);
+        dispatch(setAuthenticatedUsers(response.payload.users));
         return true;
       }
     } catch (err) {
@@ -99,19 +86,17 @@ export const useAuthUsers = (ws: WebSocketInstance) => {
 
       console.error('❌ Ошибка входа:', errorMessage);
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [ws]);
+  }, [ws, dispatch]);
 
   useEffect(() => {
-    if (ws && userData?.id) {
+    if (ws && userData?.login) {
       getAuthUsers();
     }
-  }, [ws, userData?.id, getAuthUsers]);
+  }, [ws, userData?.login, getAuthUsers]);
 
+  // Получение не залогиненых пользователей
    const getUnauthUsers = useCallback(async () => {
-    setLoading(true);
     try {
       const response = await new Promise<UnauthorizedUsersResponse>((resolve, reject) => {
         const requestId = generateRequestId();
@@ -137,7 +122,7 @@ export const useAuthUsers = (ws: WebSocketInstance) => {
       });
 
       if (response.payload?.users) {
-        setUnauthenticatedUsers(response.payload.users);
+        dispatch(setUnauthenticatedUsers(response.payload.users));
         return true;
       }
     } catch (err) {
@@ -145,22 +130,17 @@ export const useAuthUsers = (ws: WebSocketInstance) => {
 
       console.error('❌ Ошибка входа:', errorMessage);
       return false;
-    } finally {
-      setLoading(false);
     }
-  }, [ws]);
+  }, [ws, dispatch]);
 
   useEffect(() => {
-    if (ws && userData?.id) {
+    if (ws && userData?.login) {
       getUnauthUsers();
 
     }
-  }, [ws,userData?.id, getUnauthUsers]);
+  }, [ws, userData?.login]);
 
   return {
-    loading,
-    authenticatedUsers,
-    unAuthenticatedUsers,
     getAuthUsers,
     getUnauthUsers
   };

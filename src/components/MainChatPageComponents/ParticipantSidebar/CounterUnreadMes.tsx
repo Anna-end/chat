@@ -1,20 +1,27 @@
 import { useEffect } from 'react';
-import {useFetchingCountUnreadMes} from '../../../api/FetchingCountUnreadMesWS';
-interface PropsCounterUnreadMes {
+import { useAppSelector } from '../../../store/hooks';
+import { useFetchingCountUnreadMes } from '../../../api/FetchingCountUnreadMesWS';
+
+interface Props {
   userLogin: string;
 }
-export const CounterUnreadMes = ({ userLogin }: PropsCounterUnreadMes) => {
-  const { countUnreadMessages, getCountUnreadMes } = useFetchingCountUnreadMes();
+
+export const CounterUnreadMes = ({ userLogin }: Props) => {
+  const { getCountUnreadMes } = useFetchingCountUnreadMes();
+  const isConnected = useAppSelector(state => state.chat.isConnected);
+
+  const count = useAppSelector(state => state.members.unreadCounts[userLogin] ?? 0);
 
   useEffect(() => {
+    if (!isConnected) return;
     getCountUnreadMes(userLogin);
-  }, [getCountUnreadMes, userLogin]);
+  }, [userLogin, isConnected]); 
 
-  if (!countUnreadMessages) return null;
+  if (count === 0) return null;
 
   return (
-    <div className='bg-[#721E1E] text-[#E2D797] text-xs px-2 py-1 rounded-full'>
-      {countUnreadMessages}
-    </div>
+    <span className="bg-[#721E1E] text-white text-xs rounded-full px-2 py-0.5">
+      {count}
+    </span>
   );
 };

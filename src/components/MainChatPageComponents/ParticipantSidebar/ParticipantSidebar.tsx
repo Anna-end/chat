@@ -1,35 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuthUsers } from '../../../api/gettingAuthUsersWS';
 import { useWSData } from '../../../hooks/useWSData';
 import { ShowingUsersBtn } from './ShowingUsersBtn';
 import { IconUser } from './IconUser';
 import { useSelectedMember } from '../../../hooks/useSelectedMemberContext';
 import { useLoginData } from '../../../hooks/useLoginCurrentUser';
+import { useUsersOnSite } from '../../../hooks/useUsersOnSite'
+import { CounterUnreadMes} from './CounterUnreadMes';
+import { useAppSelector } from '../../../store/hooks';
+import { useAppDispatch } from '../../../store/hooks';
+import { clearUnreadCount } from '../../../store/features/members/membersSlice';
 interface User {
   login: string;
   isLogined: boolean;
 }
-
 export const ParticipantSidebar = () => {
+  const dispatch = useAppDispatch();
   const ws = useWSData();
-  const { loading, authenticatedUsers, getAuthUsers } = useAuthUsers(ws);
+  const { getAuthUsers, getUnauthUsers } = useAuthUsers(ws);
+  
+  const authenticatedUsers = useAppSelector(state => state.members.authenticatedUsers);
+  const loading = useAppSelector(state => state.members.loading);
+  const count = authenticatedUsers.length
+
+  const handleClickOnItem = (login: string) => {
+    const selectedLogin = login;
+    setData({ login: selectedLogin });
+    dispatch(clearUnreadCount(login));
+  };
+
   const [error, setError] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { userData } = useLoginData();
   const { setData } = useSelectedMember();
 
-  const handleClickOnItem = (login: string) => {
-    const selectedLogin = login;
-    setData({ login: selectedLogin });
-  };
-  useEffect(() => {
-    console.log('👥 Текущий список пользователей:', authenticatedUsers);
-  }, [authenticatedUsers]);
-
-  const onlineCount = authenticatedUsers
-    .filter((user: User) => user.login !== userData.login)
-    .filter((user: User) => user.isLogined).length;
-
+  const allUsers = useUsersOnSite();
+  
   if (!authenticatedUsers || authenticatedUsers.length === 0) {
     return (
       <div className="w-1/3 bg-[#E2D797] rounded-lg shadow-xl shadow-black/50 p-4">
@@ -53,9 +59,9 @@ export const ParticipantSidebar = () => {
         <>
           <div className="px-4 py-2">
             <h2 className="font-bold text-[#721E1E] text-lg flex items-center justify-between">
-              <span>Участники</span>
+              <span>В сети</span>
               <span className="bg-[#721E1E] text-[#E2D797] text-sm px-2 py-1 rounded-full">
-                {onlineCount}
+                {count}
               </span>
             </h2>
           </div>
@@ -74,7 +80,7 @@ export const ParticipantSidebar = () => {
             )}
 
             <div className="flex flex-col gap-2">
-              {authenticatedUsers
+              {allUsers
                 .filter((user: User) => user.login !== userData.login)
                 .map((user: User) => (
                   <div
@@ -98,6 +104,7 @@ export const ParticipantSidebar = () => {
                         </span>
                       </div>
                     </div>
+                    <CounterUnreadMes userLogin={user.login}/>
                   </div>
                 ))}
             </div>
@@ -109,6 +116,7 @@ export const ParticipantSidebar = () => {
                   onClick={() => {
                     setError(false);
                     getAuthUsers();
+                    getUnauthUsers();
                   }}
                   className="ml-2 underline hover:no-underline"
                 >
@@ -123,10 +131,10 @@ export const ParticipantSidebar = () => {
       {isCollapsed && (
         <div className="flex flex-col items-center py-4 gap-4">
           <div className="bg-[#721E1E] text-[#E2D797] w-8 h-8 rounded-full flex items-center justify-center font-bold">
-            {onlineCount}
+            {count}
           </div>
           <div className="flex flex-col gap-2">
-            {authenticatedUsers
+            {allUsers
               .filter((user: User) => user.login !== userData.login)
               .slice(0, 3)
               .map((user: User) => (

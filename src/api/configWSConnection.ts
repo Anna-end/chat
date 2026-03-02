@@ -1,11 +1,13 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import type { MessageCallback, WebSocketMessage} from '../types/websocketTypes';
+import { useAppDispatch } from '../store/hooks';
+import { setConnected, setReconnectAttempt } from '../store/features/chat/chatSlice';
+
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000;
 
 export const useWebSocket = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const dispatch = useAppDispatch();
 
   const wsRef = useRef<WebSocket | null>(null);
   const messageHandlersRef = useRef<MessageCallback[]>([]);
@@ -37,24 +39,23 @@ export const useWebSocket = () => {
 
         socket.onopen = () => {
           console.log('✅ WebSocket подключен');
-          setIsConnected(true);
-
+          dispatch(setConnected(true)); 
           reconnectAttemptRef.current = 0;
           setReconnectAttempt(0);
-
+          dispatch(setReconnectAttempt(0));
           clearReconnectTimer();
           res();
         };
 
         socket.onerror = error => {
           console.error('❌ WebSocket ошибка:', error);
-          setIsConnected(false);
+          dispatch(setConnected(false));
           rej(error);
         };
 
         socket.onclose = () => {
           console.log('🔌 WebSocket закрыт');
-          setIsConnected(false);
+          dispatch(setConnected(false));
 
           if (!isManualDisconnectRef.current) {
             const currentAttempt = reconnectAttemptRef.current;
@@ -68,8 +69,7 @@ export const useWebSocket = () => {
               );
 
               reconnectAttemptRef.current = nextAttempt;
-              setReconnectAttempt(nextAttempt);
-
+              dispatch(setReconnectAttempt(nextAttempt));
               reconnectTimerRef.current = setTimeout(() => {
                 connectRef.current?.();
               }, delay);
@@ -88,11 +88,11 @@ export const useWebSocket = () => {
           }
         };
       } catch (error) {
-        setIsConnected(false);
+        dispatch(setConnected(false));
         rej(error);
       }
     });
-  }, [clearReconnectTimer]);
+  }, [clearReconnectTimer, dispatch])
 
   useEffect(() => {
     connectRef.current = connect;
@@ -130,14 +130,12 @@ export const useWebSocket = () => {
     }
 
     wsRef.current = null;
-    setIsConnected(false);
-    setReconnectAttempt(0);
+    dispatch(setConnected(false));
+    dispatch(setReconnectAttempt(0));
     reconnectAttemptRef.current = 0;
-  }, [clearReconnectTimer]);
+  }, [clearReconnectTimer, dispatch]);
 
   return {
-    isConnected,
-    reconnectAttempt,
     maxReconnectAttempts: MAX_RECONNECT_ATTEMPTS,
     connect,
     sendMessage,

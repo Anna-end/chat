@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { saveDataUserLocalStorage } from '../api/localStorage';
 import { useAuth } from '../api/authenticationUserWS';
 import { useWSData } from '../hooks/useWSData';
+import { useAppSelector } from  '../store/hooks' ;
 export function LoginPage() {
   const navigate = useNavigate();
   const {
@@ -19,9 +20,8 @@ export function LoginPage() {
     watchPassword,
     reset,
   } = useLoginForm();
-
   const ws = useWSData();
-
+  const connect = useAppSelector(state => state.chat.isConnected);
   const { login, errorAuthUser: authError } = useAuth(ws);
 
   const { setData } = useLoginData();
@@ -79,10 +79,10 @@ export function LoginPage() {
           <SubmitButton isSubmitting={isSubmitting} isValid={isValid} />
           <div className="mt-2 flex items-center justify-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${ws.isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+              className={`w-2 h-2 rounded-full ${connect ? 'bg-green-500' : 'bg-red-500'}`}
             />
             <span className="text-xs text-gray-500">
-              {ws.isConnected ? 'WebSocket подключен' : 'WebSocket отключен'}
+              {connect ? 'WebSocket подключен' : 'WebSocket отключен'}
             </span>
             {authError && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">

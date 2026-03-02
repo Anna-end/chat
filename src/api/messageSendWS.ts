@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import type { 
   WebSocketInstance, 
   WebSocketMessage,
@@ -8,59 +8,50 @@ import type {
 import { isServerError } from '../types/errorsType';
 import { useSelectedMember } from '../hooks/useSelectedMemberContext';
 import { useLoginData } from '../hooks/useLoginCurrentUser';
-
+import { useAppDispatch } from '../store/hooks';
+import { confirmMessage, markMessageFailed, addIncomingMessage, updateMessageStatus } from '../store/features/chat/chatSlice';
+import {incrementUnreadCount} from '../store/features/members/membersSlice';
 const isMessageResponse = (
   message: WebSocketMessage,
   requestId: string
 ): message is SendingMessageUserResponse => {
   return message.type === 'MSG_SEND' && message.id === requestId;
 };
-
-interface MessageResponse {
-  id: string;
-  from: string;
-  to: string;
-  text: string;
-  datetime: number;
-  status: {
-    isDelivered: boolean;
-    isReaded: boolean;
-    isEdited: boolean;
-  };
-}
+// Подписка на сообщения от других пользователеей 
 export const useMessageServer = (ws: WebSocketInstance) => {
-  const [messageData, setMessageData] = useState<ReceivingMessageFromUser[]>([]); // ← массив
+  const dispatch = useAppDispatch();
   const { member } = useSelectedMember();
   const { userData } = useLoginData();
+
   useEffect(() => {
     if (!ws) return;
 
     const handleServerEvents = (message: WebSocketMessage) => {
-      console.log('📨 Получено сообщение:', message.type);
-
       if (message.type === 'MSG_SEND') {
         const messageServer = message as ReceivingMessageFromUser;
+        const { from, to } = messageServer.payload.message;
 
-        if (
-          messageServer.payload.message.from === member?.login &&
-          messageServer.payload.message.to === userData.login
-        ) {
-          setMessageData(prev => [...prev, messageServer]);
+        if (messageServer.id === null && to === userData.login) {
+          if (from === member?.login) {
+            dispatch(addIncomingMessage(messageServer.payload.message));
+          } else {
+            dispatch(incrementUnreadCount(from));
+          }
         }
       }
     };
 
     const unsubscribe = ws.onMessage(handleServerEvents);
-
     return () => unsubscribe();
-  }, [ws, member?.login, userData.login]);
+  }, [ws, member?.login, userData.login, dispatch]);
 
-  return { messageData };
+  return {};
 };
+
+// Отправка сообщения пользователем 
 export const useSendMessage = (ws: WebSocketInstance) => {
   const { member } = useSelectedMember();
-  const [messageResponse, setMessageResponse] = useState<MessageResponse | null>();
-  const [errorSendingMes, setErrorSendingMes] = useState<string | null>(null);
+   const dispatch = useAppDispatch();
   const sendMessage = async (messageUser: string, id: string) => {
     if (!member) return;
     try {
@@ -95,17 +86,28 @@ export const useSendMessage = (ws: WebSocketInstance) => {
           },
         });
       });
-
-      if (response.payload?.message.id) {
-        setMessageResponse(response.payload.message);
+      if (response.id === id) {
+        const serverMessage = response.payload.message;
+        dispatch(confirmMessage({tempId: response.id, serverMessage }));
+        dispatch(updateMessageStatus({
+          id: serverMessage.id,
+          status: {
+            isDelivered: serverMessage.status.isDelivered,
+            isReaded: serverMessage.status.isReaded,
+            isEdited: serverMessage.status.isEdited,
+          }
+        }));
         return response.payload.message;
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-      setErrorSendingMes(errorMessage);
-      console.error('❌ Ошибка входа:', errorMessage);
+      dispatch(markMessageFailed(id))
+      return false;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      console.error('❌ Ошибка отправки:', errorMessage);
+      dispatch(markMessageFailed(id));
       return false;
     }
-  };
-  return { sendMessage, messageResponse, errorSendingMes };
+  } 
+  
+  return { sendMessage };
 };

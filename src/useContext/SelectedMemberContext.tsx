@@ -6,7 +6,7 @@ import { useFetchingMessageHistory } from '../api/FetchingMesHistoryUser';
 
 export function SelectedMemberProvider({ children }: { children: ReactNode }) {
   const [member, setMember] = useState<SelectedMember | null>(null);
-  const { messagesHistory, loadingMessage, getUserHistoryMessage } = useFetchingMessageHistory();
+  const {getUserHistoryMessage } = useFetchingMessageHistory();
   const setData = (updates: SelectedMember) => {
     setMember(updates);
     getUserHistoryMessage(updates.login);
@@ -15,8 +15,6 @@ export function SelectedMemberProvider({ children }: { children: ReactNode }) {
   const value: SelectedMemberContextType = {
     member,
     setData,
-    messagesHistory,
-    loadingMessage,
   };
 
   return <SelectedMemberContext.Provider value={value}>{children}</SelectedMemberContext.Provider>;

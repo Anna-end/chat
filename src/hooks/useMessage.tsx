@@ -1,87 +1,46 @@
-import { useState, useMemo } from 'react';
+import { useCallback } from 'react';
 import type {
   HistoryMessage,
-  ReceivingMessageFromUser,
 } from '../types/websocketTypes';
 import {generateRequestId} from '../utils/generateRequestId'
-
-interface Message {
-  id: string;
-  text: string;
-  from: string;
-  time: string;
-}
-
-const deduplicateAndSort = (messages: Message[]): Message[] => {
-  const unique = new Map(messages.map(m => [m.id, m]));
-  return Array.from(unique.values()).sort((a, b) => Number(a.time) - Number(b.time));
-};
-
+import {useAppDispatch} from '../store/hooks';
+import {useAppSelector} from '../store/hooks';
+import {addOptimisticMessage, confirmMessage, markMessageFailed} from '../store/features/chat/chatSlice'
 interface UseMessagesProps {
-  messagesHistory: HistoryMessage[];
-  messageData: ReceivingMessageFromUser[];
   memberLogin: string | undefined;
   currentUserLogin: string;
-  onSend: (text: string, id: string) => Promise<void>;
+ onSend: (text: string, id: string) => Promise<HistoryMessage | undefined>;
 }
 
 export const useMessages = ({
-  messagesHistory,
-  messageData,
   memberLogin,
   currentUserLogin,
   onSend,
 }: UseMessagesProps) => {
-  const [sentMessages, setSentMessages] = useState<Record<string, Message[]>>({});
-  const [sendError, setSendError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const allMessages = useAppSelector(state => state.chat.messages);
 
-  const allMessages = useMemo(() => {
-    const history: Message[] = messagesHistory.map(msg => ({
-      id: msg.id,
-      text: msg.text,
-      from: msg.from,
-      time: String(msg.datetime),
-    }));
-
-    const incoming: Message[] = messageData.map(msg => ({
-      id: msg.payload.message.id,
-      text: msg.payload.message.text,
-      from: msg.payload.message.from,
-      time: String(msg.payload.message.datetime),
-    }));
-
-    const sent = sentMessages[memberLogin ?? ''] ?? [];
-
-    return deduplicateAndSort([...history, ...incoming, ...sent]);
-  }, [messagesHistory, messageData, sentMessages, memberLogin]);
-
-  const sendMessage = async (text: string) => {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || !memberLogin) return;
+     const tempId = generateRequestId();
 
-    const id = generateRequestId();
-    const optimisticMessage: Message = {
-      id,
-      text,
-      from: currentUserLogin,
-      time: String(Date.now()),
-    };
-
-    setSentMessages(prev => ({
-      ...prev,
-      [memberLogin]: [...(prev[memberLogin] ?? []), optimisticMessage],
-    }));
-    setSendError(null);
-
+    dispatch(addOptimisticMessage({
+    id: tempId,
+    text,
+    from: currentUserLogin,
+    time: String(Date.now()),
+    status: { isDelivered: false, isReaded: false, isEdited: false },
+    isPending: true,
+  }));
+  
     try {
-      await onSend(text, id);
+      const serverMessage = await onSend(text, tempId);
+      if (serverMessage) {
+        dispatch(confirmMessage({ tempId, serverMessage }));
+      } 
     } catch {
-      setSentMessages(prev => ({
-        ...prev,
-        [memberLogin]: (prev[memberLogin] ?? []).filter(m => m.id !== id),
-      }));
-      setSendError('Не удалось отправить сообщение');
+      dispatch(markMessageFailed(tempId));
     }
-  };
-
-  return { allMessages, sendMessage, sendError };
-};
+  }, [dispatch, memberLogin, currentUserLogin, onSend])
+  return { allMessages, sendMessage }
+}

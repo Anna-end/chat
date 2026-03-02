@@ -9,7 +9,6 @@ interface LoginDataProviderProps {
 export function LoginDataProvider({ children }: LoginDataProviderProps) {
   const [userData, setUserData] = useState<UserData>({
     login: '',
-    id: '',
   });
 
   const setData = (updates: Partial<UserData>) => {
@@ -20,7 +19,7 @@ export function LoginDataProvider({ children }: LoginDataProviderProps) {
   };
 
   const clearData = () => {
-    setUserData({ login: '', id: '' });
+    setUserData({ login: ''});
   };
 
   const value: LoginDataContextType = {

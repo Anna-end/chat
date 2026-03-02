@@ -1,12 +1,10 @@
-import type {
-  WebSocketMessage,
-  MessageHistoryWithUserResponse,
-  HistoryMessage,
-} from '../types/websocketTypes';
+import type { WebSocketMessage,MessageHistoryWithUserResponse } from '../types/websocketTypes';
 import {generateRequestId} from '../utils/generateRequestId'
 import { isServerError } from '../types/errorsType';
-import { useState, useCallback } from 'react';
+import {  useCallback } from 'react';
 import { useWSData } from '../hooks/useWSData';
+import { useAppDispatch } from '../store/hooks';
+import { setMessageHistory, setLoading, clearMessages} from '../store/features/chat/chatSlice';
 
 const isMessageHistory = (
   message: WebSocketMessage,
@@ -17,17 +15,14 @@ const isMessageHistory = (
 
 export const useFetchingMessageHistory = () => {
   const ws = useWSData();
-  const [messagesHistory, setMessagesHistory] = useState<HistoryMessage[]>([]);
-  const [loadingMessage, setLoadingMessage] = useState(false);
-  const [historyMessageError, setHistoryMessageError] = useState<string | null>(null);
-
+  const dispatch = useAppDispatch();
+  const requestId = generateRequestId();
   const getUserHistoryMessage = useCallback(
     async (loginSelectedUser: string) => {
-      setMessagesHistory([]);
-      setLoadingMessage(true);
-      setHistoryMessageError(null);
+      dispatch(setLoading(true));
+      dispatch(clearMessages());
       try {
-        const requestId = generateRequestId();
+        
         const response = await new Promise<MessageHistoryWithUserResponse>((resolve, reject) => {
           const unsubscribe = ws.onMessage((message: WebSocketMessage) => {
             if (isMessageHistory(message, requestId)) {
@@ -49,26 +44,21 @@ export const useFetchingMessageHistory = () => {
           });
         });
 
-        if (response.payload.messages) {
-          setMessagesHistory(response.payload.messages);
-          setLoadingMessage(false);
+        if (response.payload.messages && response.id === requestId) {
+          dispatch(setMessageHistory(response.payload.messages))
           return true;
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
-        setHistoryMessageError(errorMessage);
         console.error('❌ Ошибка истории:', errorMessage);
         return false;
-      } finally {
-        setLoadingMessage(false);
       }
-    },
-    [ws]
-  );
+      finally {
+        dispatch(setLoading(false)); // ←
+      }
+    }, [ws, dispatch, requestId])
   return {
-    messagesHistory,
-    loadingMessage,
-    historyMessageError,
     getUserHistoryMessage,
   };
-};
+  };
+

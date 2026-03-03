@@ -34,8 +34,8 @@ export const useMessageServer = (ws: WebSocketInstance) => {
 
         if (messageServer.id === null && to === userData.login) {
           if (from === member?.login) {
-            await getReadMes(messageServer.payload.message.id);
             dispatch(addIncomingMessage(messageServer.payload.message));
+            await getReadMes(messageServer.payload.message.id);
             
           } else {
             dispatch(incrementUnreadCount(from));

@@ -13,3 +13,4 @@ export const isServerError = (
 ): message is ServerErrorResponse => {
   return message.type === 'ERROR' && message.id === requestId;
 };
+

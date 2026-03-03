@@ -12,9 +12,9 @@ export const MessageList = () => {
   const ws = useWSData();
   const { userData } = useLoginData();
   const { sendMessage: wsSend } = useSendMessage(ws);
-  const { member } = useSelectedMember(); // убрали loadingMessage
+  const { member } = useSelectedMember();
   
-  const loadingMessage = useAppSelector(state => state.chat.loading); // ← из стора
+  const loadingMessage = useAppSelector(state => state.chat.loading);
   
   useMessageServer(ws);
 

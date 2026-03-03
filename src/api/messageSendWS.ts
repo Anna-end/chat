@@ -4,7 +4,7 @@ import type {
   WebSocketMessage,
   ReceivingMessageFromUser,
   SendingMessageUserResponse, } from '../types/websocketTypes';
-
+import  { useReadStatus } from './messageReadStatusWs';
 import { isServerError } from '../types/errorsType';
 import { useSelectedMember } from '../hooks/useSelectedMemberContext';
 import { useLoginData } from '../hooks/useLoginCurrentUser';
@@ -22,18 +22,21 @@ export const useMessageServer = (ws: WebSocketInstance) => {
   const dispatch = useAppDispatch();
   const { member } = useSelectedMember();
   const { userData } = useLoginData();
-
+  const {getReadMes} = useReadStatus()
   useEffect(() => {
     if (!ws) return;
 
-    const handleServerEvents = (message: WebSocketMessage) => {
+    const handleServerEvents = async (message: WebSocketMessage) => {
       if (message.type === 'MSG_SEND') {
+        console.log('перехват')
         const messageServer = message as ReceivingMessageFromUser;
         const { from, to } = messageServer.payload.message;
 
         if (messageServer.id === null && to === userData.login) {
           if (from === member?.login) {
+            await getReadMes(messageServer.payload.message.id);
             dispatch(addIncomingMessage(messageServer.payload.message));
+            
           } else {
             dispatch(incrementUnreadCount(from));
           }

@@ -1,7 +1,6 @@
 import type {
   WebSocketMessage,
   MessageReadStatusChangeResponse,
-  WebSocketInstance,
   NotificationMessageReadStatusChange
 } from '../types/websocketTypes';
 import {generateRequestId} from '../utils/generateRequestId'
@@ -26,6 +25,23 @@ export const useReadStatus = () => {
   const { member } = useSelectedMember();
 
   const memberLogin = member?.login; 
+
+    useEffect(() => {
+    if (!ws) return;
+
+    const unsubscribe = ws.onMessage((message: WebSocketMessage) => {
+      if (message.type === 'MSG_READ' && message.id === null) {
+         const messageServer = message as NotificationMessageReadStatusChange;
+        dispatch(updateMessageStatus({
+            id: messageServer.payload.message.id,
+            status: messageServer.payload.message.status,}))
+      }
+    });
+
+    return () => unsubscribe();
+  }, [ws, dispatch]);
+
+
   const getReadMes = useCallback(
     async (id: string) => {
       try {
@@ -52,9 +68,6 @@ export const useReadStatus = () => {
         });
 
         if (response.payload.message !== undefined && response.payload.message !== null) {
-          dispatch(updateMessageStatus({
-            id: response.payload.message.id,
-            status: response.payload.message.status,}));
 
             if (memberLogin) {
           dispatch(clearUnreadCount(memberLogin));
@@ -75,22 +88,3 @@ export const useReadStatus = () => {
   };
 };
 
-export const useMessageStatuses = (ws: WebSocketInstance) => {
-  const dispatch = useAppDispatch();
-  useEffect(() => {
-    if (!ws) return;
-
-    const unsubscribe = ws.onMessage((message: WebSocketMessage) => {
-      if (message.type === 'MSG_READ' && message.id === null) {
-         const messageServer = message as NotificationMessageReadStatusChange;
-        dispatch(updateMessageStatus({
-            id: messageServer.payload.message.id,
-            status: messageServer.payload.message.status,}))
-      }
-    });
-
-    return () => unsubscribe();
-  }, [ws, dispatch]);
-
-  return { };
-};
